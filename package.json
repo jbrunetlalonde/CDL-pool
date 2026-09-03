@@ -1,0 +1,15 @@
+{
+  "name": "cdl-pool",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Canadian Income Tax Calculator — tax engine with CRA-correct 2026 tables (tax-ca upstream + BC/PE overrides).",
+  "type": "module",
+  "scripts": {
+    "dump": "node scripts/dump-tax-data.mjs",
+    "test": "node --test tests/ lib/",
+    "verify": "npm run dump && npm run test"
+  },
+  "dependencies": {
+    "@equisoft/tax-ca": "~2026.10.0"
+  }
+}

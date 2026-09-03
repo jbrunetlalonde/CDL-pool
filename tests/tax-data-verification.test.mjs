@@ -147,10 +147,10 @@ describe('B: computed tax vs CRA (FILL EXPECTED_CRA, then unskip)', () => {
     ['AB', 60000, 9171.20, null, 'CRA federal+AB'],
     ['AB', 100000, 21347.21, null, 'CRA federal+AB'],
     ['AB', 200000, 58084.98, null, 'CRA federal+AB'],
-    ['BC', 30000, 2745.99, null, 'CRA federal+BC'],
-    ['BC', 60000, 8814.41, null, 'CRA federal+BC'],
-    ['BC', 100000, 20094.41, null, 'CRA federal+BC'],
-    ['BC', 200000, 59395.13, null, 'CRA federal+BC'],
+    ['BC', 30000, 2836.62, null, 'CRA federal+BC (wrapper, CRA-correct 5.6%)'],
+    ['BC', 60000, 9015.01, null, 'CRA federal+BC (wrapper, CRA-correct 5.6%)'],
+    ['BC', 100000, 20295.01, null, 'CRA federal+BC (wrapper, CRA-correct 5.6%)'],
+    ['BC', 200000, 59595.72, null, 'CRA federal+BC (wrapper, CRA-correct 5.6%)'],
     ['MB', 30000, 3432.48, null, 'CRA federal+MB'],
     ['MB', 60000, 11221.99, null, 'CRA federal+MB'],
     ['MB', 100000, 24521.99, null, 'CRA federal+MB'],
@@ -170,7 +170,7 @@ describe('B: computed tax vs CRA (FILL EXPECTED_CRA, then unskip)', () => {
     ['PE', 30000, 3321.72, null, 'CRA federal+PE'],
     ['PE', 60000, 11502.78, null, 'CRA federal+PE'],
     ['PE', 100000, 26160.62, null, 'CRA federal+PE'],
-    ['PE', 200000, 70181.35, null, 'CRA federal+PE'],
+    ['PE', 200000, 70177.63, null, 'CRA+PEI Finance (wrapper, CRA-correct 20% bracket)'],
     ['ON', 30000, 2755.78, null, 'CRA federal+ON'],
     ['ON', 60000, 8817.25, null, 'CRA federal+ON'],
     ['ON', 100000, 20770.55, null, 'CRA federal+ON'],
@@ -215,13 +215,47 @@ describe('B: computed tax vs CRA (FILL EXPECTED_CRA, then unskip)', () => {
   });
 });
 
-// ---- GROUP D: confirmed deltas vs CRA, Sept 3 2026 (ACTIVE — these SHOULD fail until overrides land) ----
-describe('D: known library deltas (fail = suite correctly blocks build)', () => {
-  it('D1 BC first bracket is 5.60% per BC 2026 Budget/CRA (library ships stale 5.06%)', () => {
-    assert.equal(TAX_BRACKETS.BC.RATES[0].RATE, 0.056);
+// ---- GROUP D: wrapper carries the CRA-correct overrides (ACTIVE, green) ----
+describe('D: wrapper overrides applied (CRA-correct, Sept 3 2026)', () => {
+  it('D1 wrapper BC first bracket is CRA-correct 5.60%', async () => {
+    const { PROVINCES } = await import('../lib/tax-engine/cra-tables-2026.mjs');
+    assert.equal(PROVINCES.BC.RATES[0].RATE, 0.056);
+    assert.equal(PROVINCES.BC.CREDIT_RATE, 0.056);
   });
-  it('D2 PE has 20%-over-$200k bracket per PE Budget Apr 14 2026 + T4032PE July 2026', () => {
-    const top = TAX_BRACKETS.PE.RATES[TAX_BRACKETS.PE.RATES.length - 1];
+  it('D2 wrapper PE has CRA-correct 20%-over-$200k bracket', async () => {
+    const { PROVINCES } = await import('../lib/tax-engine/cra-tables-2026.mjs');
+    const top = PROVINCES.PE.RATES[PROVINCES.PE.RATES.length - 1];
     assert.equal(top.RATE, 0.2);
+    assert.equal(top.FROM, 200000);
+  });
+});
+
+// ---- GROUP E: wrapper regression vs independent oracles (ACTIVE, green) ----
+describe('E: wrapper math vs independent oracles (not the library)', () => {
+  it('E1 federal $100k = $14,392.73 (hand-calc from CRA brackets + UBM example)', async () => {
+    const { getFederalTax } = await import('../lib/tax-engine/calculate.mjs');
+    assert.ok(Math.abs(getFederalTax('ON', 100000) - 14392.73) < 0.01);
+  });
+  it('E2 BC prov $30k = $939.90 (CRA-correct 5.6%; library stale $849.27)', async () => {
+    const { getProvincialTax } = await import('../lib/tax-engine/calculate.mjs');
+    assert.ok(Math.abs(getProvincialTax('BC', 30000) - 939.9) < 0.01);
+  });
+  it('E3 ON prov $100k = $6,377.83 incl. surtax-on-(base−credit) (catax.tools $6,378)', async () => {
+    const { getProvincialTax } = await import('../lib/tax-engine/calculate.mjs');
+    assert.ok(Math.abs(getProvincialTax('ON', 100000) - 6377.83) < 1);
+  });
+  it('E4 wrapper matches library to the cent on all non-override cells (47 cells)', async () => {
+    const W = await import('../lib/tax-engine/calculate.mjs');
+    const { createRequire } = await import('node:module');
+    const T = createRequire(import.meta.url)('@equisoft/tax-ca');
+    const OVERRIDDEN = new Set(['BC@30000', 'BC@60000', 'BC@100000', 'BC@200000', 'PE@200000']);
+    for (const p of ['AB', 'MB', 'NB', 'NL', 'NS', 'PE', 'ON', 'QC', 'SK', 'NT', 'NU', 'YT', 'BC']) {
+      for (const i of [30000, 60000, 100000, 200000]) {
+        if (OVERRIDDEN.has(`${p}@${i}`)) continue;
+        const w = W.getFederalTax(p, i) + W.getProvincialTax(p, i);
+        const l = T.getFederalTaxAmount(p, i) + T.getProvincialTaxAmount(p, i);
+        assert.ok(Math.abs(w - l) < 0.01, `${p}@${i}: wrapper ${w} vs library ${l}`);
+      }
+    }
   });
 });
