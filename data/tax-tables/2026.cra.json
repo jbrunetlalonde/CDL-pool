@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "taxYear": 2026,
+    "snapshotDate": "2026-09-03",
+    "upstream": "@equisoft/tax-ca@2026.10.0",
+    "oracle": "CRA current-year.html (mod 2026-06-25) + Revenu Quebec + PEI Finance + gov.bc.ca + CRA payroll tables",
+    "rule": "Brackets below are CRA-correct. Where the library differs, the library is wrong and the wrapper MUST override (see _overrides). BPA values are library+cross-check pending Form 428/TD1 confirmation except federal.",
+    "overrides": [
+      "BC RATES[0].RATE 0.0506 -> 0.0560 + TAX_CREDIT_RATE -> 0.056 (BC 2026 Budget, CRA page)",
+      "PE add 20% bracket over $200,000; threshold 142250 -> 142520 per CRA page (EY variant $142,250 noted)",
+      "MB keep 47000/100000 per CRA payroll T4032 + freeze policy; CRA page shows 47564/101200 — confirm with Manitoba Finance"
+    ]
+  },
+  "federal": {
+    "brackets": [
+      { "to": 58523, "rate": 0.14 },
+      { "to": 117045, "rate": 0.205 },
+      { "to": 181440, "rate": 0.26 },
+      { "to": 258482, "rate": 0.29 },
+      { "to": null, "rate": 0.33 }
+    ],
+    "bpa": { "max": 16452, "min": 14829, "phaseOutFrom": 181440, "phaseOutTo": 258482 },
+    "source": "CRA current-year.html — VERIFIED 2026-09-03"
+  },
+  "provinces": {
+    "AB": { "brackets": [[61200, 0.08], [154259, 0.1], [185111, 0.12], [246813, 0.13], [370220, 0.14], [null, 0.15]], "bpa": 22769, "status": "VERIFIED vs CRA" },
+    "BC": { "brackets": [[50363, 0.056], [100728, 0.077], [115648, 0.105], [140430, 0.1229], [190405, 0.147], [265545, 0.168], [null, 0.205]], "bpa": 13216, "status": "OVERRIDE vs library (library stale 0.0506)" },
+    "MB": { "brackets": [[47000, 0.108], [100000, 0.1275], [null, 0.174]], "bpa": 15780, "status": "CONFLICT — using frozen/T4032 values; CRA page shows 47564/101200; confirm MB Finance" },
+    "NB": { "brackets": [[52333, 0.094], [104666, 0.14], [193861, 0.16], [null, 0.195]], "bpa": 13664, "status": "VERIFIED vs CRA" },
+    "NL": { "brackets": [[44678, 0.087], [89354, 0.145], [159528, 0.158], [223340, 0.178], [285319, 0.198], [570638, 0.208], [1141275, 0.213], [null, 0.218]], "bpa": 11188, "status": "VERIFIED vs CRA" },
+    "NS": { "brackets": [[30995, 0.0879], [61991, 0.1495], [97417, 0.1667], [157124, 0.175], [null, 0.21]], "bpa": 11932, "status": "VERIFIED vs CRA" },
+    "PE": { "brackets": [[33928, 0.095], [65820, 0.1347], [106890, 0.166], [142520, 0.1762], [200000, 0.19], [null, 0.2]], "bpa": 15000, "status": "OVERRIDE vs library (library missing 20% bracket; threshold per CRA page, EY variant 142250 noted)" },
+    "ON": { "brackets": [[53891, 0.0505], [107785, 0.0915], [150000, 0.1116], [220000, 0.1216], [null, 0.1316]], "bpa": 12989, "status": "VERIFIED vs CRA" },
+    "QC": { "brackets": [[54345, 0.14], [108680, 0.19], [132245, 0.24], [null, 0.2575]], "bpa": 18952, "abatement": 0.165, "status": "VERIFIED vs Revenu Quebec (via mirrors; RQ direct 403 to bots)" },
+    "SK": { "brackets": [[54532, 0.105], [155805, 0.125], [null, 0.145]], "bpa": 20381, "status": "VERIFIED vs CRA" },
+    "NT": { "brackets": [[53003, 0.059], [106009, 0.086], [172346, 0.122], [null, 0.1405]], "bpa": 18198, "status": "VERIFIED vs CRA" },
+    "NU": { "brackets": [[55801, 0.04], [111602, 0.07], [181439, 0.09], [null, 0.115]], "bpa": 19659, "status": "VERIFIED vs CRA" },
+    "YT": { "brackets": [[58523, 0.064], [117045, 0.09], [181440, 0.109], [500000, 0.128], [null, 0.15]], "bpa": 16452, "status": "VERIFIED vs CRA" }
+  },
+  "payroll": {
+    "cpp": { "ympe": 74600, "yampe": 85000, "exempt": 3500, "base": 0.0595, "step2": 0.04, "maxCpp1": 4230.45, "maxCpp2": 416.0, "status": "VERIFIED vs CRA payroll tables" },
+    "qpp": { "ympe": 74600, "yampe": 85000, "exempt": 3500, "base": 0.063, "step2": 0.04, "status": "VERIFIED" },
+    "ei": { "mie": 68900, "rate": 0.0163, "rateQc": 0.013, "max": 1123.07, "maxQc": 895.7, "status": "VERIFIED" },
+    "qpip": { "mie": 103000, "salaried": 0.0043, "selfEmployed": 0.00764, "status": "VERIFIED" }
+  },
+  "limits": {
+    "rrsp": 33810,
+    "tfsa": { "value": 7000, "note": "library UPDATE_YEAR 2024 — confirm 2026 via CRA before stamp" },
+    "resp": 50000,
+    "cesg": { "rate": 0.2, "annualMax": 500, "lifetimeMax": 7200 },
+    "fhsa": { "annual": 8000, "lifetime": 40000 },
+    "status": "illustrative from PRD — confirm via CRA registered-plans pages before stamp"
+  }
+}

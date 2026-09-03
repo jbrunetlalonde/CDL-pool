@@ -214,8 +214,8 @@ The default return-rate assumption, the 30%-of-income rent guideline, and the do
 
 This is the part that actually needs care, because tax data changes yearly and mistakes here are visible/embarrassing.
 
-- Store all tax-year data (brackets, BPA, CPP/EI rates, contribution limits) as versioned, typed config — e.g. `data/tax-tables/2026.ts`, `data/tax-tables/2025.ts` — never inline in calculation logic.
-- Calculation functions take `(income, province, taxYear)` and look up the right table — this makes adding a year or a new province a data change, not a code change.
+- Store all tax-year data (brackets, BPA, CPP/EI rates, contribution limits) as versioned, typed config — e.g. `data/tax-tables/2026.ts`, `data/tax-tables/2025.ts` — never inline in calculation logic. **v1 implementation: source this from `@equisoft/tax-ca` (§10.1) pinned to a minor (`~2026.10.0`), re-exported through our own `lib/tax-engine/` wrapper — data change = dependency bump + test run, not a code rewrite.**
+- Calculation functions take `(income, province, taxYear)` and look up the right table — this makes adding a year or a new province a data change, not a code change. Wrapper signature stays stable even if upstream export shapes change on a yearly major.
 - Extend the same pattern to the Scenario Planner's assumptions (§7.3) — default return rate, rent-affordability guideline, down-payment presets — so every "number we made up" in the app lives in one auditable, dated place.
 - Add a lightweight internal "data source" doc noting where each number came from (CRA page, date pulled) so next January's update is a 30-minute task, not a research project.
 - No user data is stored anywhere in v1 — calculations happen entirely in-browser and nothing is sent to a server to compute a result. The only server-side data at all is the optional anonymous feedback widget (§8): a vote + optional comment keyed to an anonymous fingerprint, not an account.
@@ -237,7 +237,20 @@ This is the part that actually needs care, because tax data changes yearly and m
 | **API Ninjas Income Tax Calculator API** | REST endpoint — pass `country=CA`, income, province, year; get back federal + provincial + payroll-tax breakdown. | Free tier (limited); paid for commercial use | Good for cross-checking your own engine's output in tests. I wouldn't make it the *source of truth* — you'd be trusting a third party's Canada coverage over CRA's own tables, with no way to audit their methodology, for a product whose whole pitch is accurate numbers. |
 | **CountryTaxCalc API** | Same idea, broader: 111 countries, one consistent response schema. | Free tier: 1,000 req/month, no card | Worth a look *specifically because of* the Phase 4 multi-country goal — removes the "rewrite the parsing layer per country" problem if you ever expand. Same caveat for Canada specifically: your own hand-verified data (§9) is more trustworthy and costs nothing per request. |
 
-**My actual recommendation: keep Canadian tax calculation in-house for v1.** It's the product's core credibility, it's genuinely low-maintenance (a ~30-minute update once a year per §9), and howmuch.tax's own architecture backs this as the right call. Use the two APIs above only as a test-suite cross-check, or as Phase 4 infrastructure if you get there.
+### 10.1 Adopted: `@equisoft/tax-ca` library (evaluated Sept 3, 2026)
+
+Not a REST API — a **bundled data + calculation library**, which is exactly what §9 / this section calls for (ships in JS bundle, zero calc API calls, $0 infra, fully client-side).
+
+- **Repo:** `https://github.com/kronostechnologies/tax-ca` (Kronos → Equisoft, maintained by Equisoft/plan team, Quebec City)
+- **Artifacts:** npm `@equisoft/tax-ca` (TS/JS, flat exports, built-in types) + Maven `com.equisoft:tax-ca` (same version, same commit). Kotlin Multiplatform, single `src/commonMain` source of truth.
+- **Version at evaluation:** `2026.10.0` (610 versions published, ~601 weekly downloads, 0 dependencies, 876 commits, 27 stars / 6 forks). Major = tax-year dataset (e.g. `2026.x`), minor/patch may still break — lock to minor + test on upgrade per their README.
+- **Coverage relevant to v1:** `taxes/IncomeTax` (all federal + 13 provincial/territorial brackets), `BPA`/credits, `CPP`/`QPP`, `EI`, `QPIP`, `OAS`; `investments/` (RRSP, TFSA, RESP grants CESG/CLB/QESI/BCTESG, LIRA/LIF/RRIF); `misc/` (CPI, life expectancy). Each data file carries `Sources` / `Revised` headers — directly satisfies §9's "data source doc" requirement.
+- **License:** `LGPL-3.0-only` — acceptable for an npm-installed web app, but flag for review if bundling strategy changes. No copyleft contamination of our own code via normal dynamic linking, but keep dependency isolated in `lib/tax-engine/` and document it.
+- **Numeric policy:** `Double` in common code for bit-for-bit JS parity; JVM `BigDecimal`-exact variants exist. For our JS-only v1: round to cents at display boundary, never accumulate floating error across brackets — test with $0.01 edge cases.
+
+**Why adopt over hand-rolled JSON:** (1) Quebec correctness for free (QPP/QPIP often wrong in generic APIs), (2) yearly revision workflow + golden corpus already exists, (3) TS declarations + compatibility gates (`ts-compat/`) enforce stable export shapes, (4) still $0, still anonymous, still no server. We keep our own wrapper + Vitest suite vs CRA examples as the real source of trust — the library is the upstream data feed, not blind trust.
+
+**My actual recommendation (updated): use `@equisoft/tax-ca` as the upstream data + calc foundation for v1, behind our own thin wrapper.** It's the product's core credibility, it's genuinely low-maintenance (bump minor once a year + run §13 suite per §9), and howmuch.tax's own architecture backs this as the right call. Use the two REST APIs above only as a test-suite cross-check, or as Phase 4 infrastructure if you get there.
 
 **Real savings insight, accounts, and graphs — this is account aggregation, a different problem:**
 
@@ -362,6 +375,7 @@ Optimized for: cheap to run, fast to build, slick by default, easy for one perso
 | Backend/DB | **None for v1** (schema ready in §11 for if that ever changes) | All calc is client-side; no accounts = no database needed = $0 backend cost |
 | Analytics | **Vercel Analytics** or **Plausible** (privacy-friendly) | Understand usage without invasive tracking |
 | Testing | **Vitest** for calculation logic (this is the part that MUST be correct) | Unit-test every bracket/edge case against known CRA examples, plus the compound-interest and affordability formulas in §7 |
+| Tax data | **`@equisoft/tax-ca@~2026.10.0`** (LGPL-3.0, 0 deps, see §10.1) | Upstream brackets/CPP/EI/QPIP/OAS + grants, consumed only via `lib/tax-engine/` wrapper; verify bundle size via bundlephobia |
 
 This stack keeps you at effectively $0/month until traffic is meaningful, with a clean upgrade path (add Postgres via Supabase later only if a specific feature — like Flinks account-linking, §10 — actually calls for it).
 
@@ -422,6 +436,7 @@ This matches the pattern confirmed directly on howmuch.tax's own footer (§2). B
 - **"CELIAPP" = FHSA** — confirmed. The Financial Insights content in §6 and the Scenario Planner in §7 both refer to the FHSA (First Home Savings Account) accordingly.
 - **All 13 provinces/territories in scope for Phase 1** — confirmed. §5.1 and §9 treat this as the v1 default, not a phased rollout by province.
 - **Wait on `design.md` before starting UI build** — confirmed. Calculator and Scenario Planner logic (§5, §7, §9) can be built and unit-tested in parallel in the meantime.
+- **Adopt `@equisoft/tax-ca` as upstream tax data + calc library (Sept 3, 2026)** — confirmed. Consumed only through `lib/tax-engine/` wrapper pinned to minor; own Vitest suite vs CRA examples remains source of trust; fallback is vendoring the year's tables if upstream lags in January. See §10.1.
 
 ---
 

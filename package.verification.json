@@ -1,0 +1,15 @@
+{
+  "name": "cdl-pool-verification",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pre-build verification only — proves tax-ca 2026.10.0 data before any Next.js scaffold.",
+  "type": "module",
+  "scripts": {
+    "dump": "node scripts/dump-tax-data.mjs",
+    "test": "node --test tests/tax-data-verification.test.mjs",
+    "verify": "npm run dump && npm run test"
+  },
+  "dependencies": {
+    "@equisoft/tax-ca": "~2026.10.0"
+  }
+}
