@@ -5,11 +5,26 @@
   "description": "Canadian Income Tax Calculator — tax engine with CRA-correct 2026 tables (tax-ca upstream + BC/PE overrides).",
   "type": "module",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "dump": "node scripts/dump-tax-data.mjs",
     "test": "node --test tests/ lib/",
     "verify": "npm run dump && npm run test"
   },
   "dependencies": {
-    "@equisoft/tax-ca": "~2026.10.0"
+    "@equisoft/tax-ca": "~2026.10.0",
+    "next": "^15.5.25",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.4.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3"
   }
 }

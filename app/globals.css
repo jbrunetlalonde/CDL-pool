@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+/* DESIGN.md tokens (Cohere 2026 system) as CSS variables */
+:root {
+  --canvas: #ffffff;
+  --ink: #212121;
+  --primary: #17171c;
+  --on-primary: #ffffff;
+  --soft-stone: #eeece7;
+  --hairline: #d9d9dd;
+  --muted: #93939f;
+  --slate: #75758a;
+  --action-blue: #1863dc;
+  --deep-green: #003c33;
+  --radius-sm: 8px;
+  --radius-lg: 22px;
+  --radius-pill: 32px;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+}
