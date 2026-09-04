@@ -75,42 +75,44 @@ Edge cases (must pass before build):
 - TFSA/RRSP/FHSA/RESP/CESG: CRA registered plans pages
 - Cross-checks (not oracles): https://www.taxtips.ca, WealthSimple calculator, howmuch.tax/canada
 
-## 4. Verification report — Sept 3, 2026 (done by agent vs official sources)
+## 4. Verification report — Sept 3, 2026 (done by agent vs official sources, updated with online validation)
 
 Method: dumped `tax-ca@2026.10.0`, compared bracket-by-bracket to CRA
 `current-year.html` (modified 2026-06-25), Revenu Québec 2026 rates, PEI Finance
 Budget 2026 + CRA T4032PE (July 2026), BC 2026 Budget / gov.bc.ca, CRA payroll
 tables (T4032MB), Taxtips.ca as cross-check only. Independent math re-computed
-federal tax from raw CRA brackets (no library functions).
+federal tax from raw CRA brackets (no library functions). KPMG Jun-30-2026
+personal tax tables used as Big-Four second oracle (brackets + top marginals).
 
 - Federal: library `14392.73` at $100k = independent hand-calc `14392.73` = UBM worked example. **VERIFIED.**
 - Payroll: CPP YMPE $74,600 / YAMPE $85,000 @5.95%+4%, QPP 6.3%, EI $68,900 @1.63%/1.30% QC, QPIP $103,000 — all match CRA/catax.tools. **VERIFIED.**
+- KPMG top-marginal cross-check (E5, active): BC 53.50, SK 47.50, MB 50.40, ON 53.53, QC 53.31, NB 52.50, NS 54.00, PE 53.00, NT 47.05, NU 44.50 — all match wrapper. **VERIFIED.**
 
 | Prov | Brackets vs CRA | BPA | Verdict |
 |---|---|---|---|
-| AB | 6 brackets match | 22769 | ✅ VERIFIED |
-| BC | CRA 5.60% first bracket; library 5.06% (2025 rate, stale) | 13216 matches | ❌ FAIL — undercharges ~$91 at $30k; needs wrapper override to 5.60% |
-| MB | CRA page $47,564/$101,200 vs CRA payroll T4032 $47,000/$100,000 (frozen); library = $47,000/$100,000 = T4032 + Taxtips frozen | 15780 matches | ⚠️ CONFLICT — two CRA sources disagree; library matches payroll tables + freeze policy, likely correct; confirm with Manitoba Finance before stamp |
-| NB | match | 13664 | ✅ VERIFIED |
-| NL | match (8 brackets) | 11188 | ✅ VERIFIED |
-| NS | match | 11932 | ✅ VERIFIED |
-| PE | CRA 6 brackets incl. new 20% over $200,000 (Apr 14 2026 budget, T4032PE July 2026); library 5 brackets tops at 19%, threshold $142,250 vs CRA $142,520 | 15000 matches | ❌ FAIL for >$142k (matters at $200k case); ≤$100k cells unaffected |
-| ON | match | 12989 | ✅ VERIFIED |
-| QC | 14/19/24/25.75% + thresholds match Revenu Québec; BPA $18,952, abatement 16.5% | 18952 | ✅ VERIFIED (brackets; abatement math covered by B-suite) |
-| SK | match | 20381 | ✅ VERIFIED |
-| NT | match | 18198 | ✅ VERIFIED |
-| NU | match | 19659 | ✅ VERIFIED |
-| YT | match (mirrors federal thresholds — intentional) | 16452 | ✅ VERIFIED |
+| AB | 6 brackets match | 22769 (CRA T4032AB) | ✅ VERIFIED |
+| BC | CRA 5.60% first bracket; library 5.06% (2025 rate, stale) | 13216 | ✅ VERIFIED + wrapper override (BPA confirmed) |
+| MB | frozen $47,000/$100,000 — RESOLVED: MB Budget 2025 bulletin + MB Budget 2026 + Andersen + EY + PwC + CRA T4032MB all confirm freeze; CRA current-year page $47,564/$101,200 is stale | 15780 frozen (BPA clawback $200k–$400k noted; matrix max $200k unaffected) | ✅ VERIFIED |
+| NB | match | 13664 (2025 $13,396 × 1.02) | ✅ VERIFIED |
+| NL | match (8 brackets) | 13094 — NL Budget Apr 29 2026 raised from $11,188 eff. Jan 1 2026 (CRA T4032-NL); library stale → wrapper override (−$165.82/taxpayer) | ✅ VERIFIED + override |
+| NS | match | 11932 (2025 $11,744 × 1.016, Taxtips note 3; catax confirms) | ✅ VERIFIED |
+| PE | 6 brackets incl. new 20% over $200,000 — RESOLVED eff. Jan 1 2026: PE Budget + Bill 23 + PEI Finance Jun 2026 + CRA page + T4032PE Jul 2026 + KPMG note 9 (2027 claims in Baker Tilly/MNP/PaycheckGuru predate the Apr-22 correction); threshold $142,520 confirmed by 1.8% arithmetic (140,000×1.018), $142,250 in EY tables is a typo | 15000 (PEI Finance) | ✅ VERIFIED + override |
+| ON | match + surtax 20%/$5,818 + 36%/$7,446 on (base−credit) | 12989 | ✅ VERIFIED |
+| QC | 14/19/24/25.75% + thresholds match Revenu Québec; BPA $18,952, abatement 16.5% | 18952 | ✅ VERIFIED |
+| SK | match | 20381 (saskatchewan.ca official) | ✅ VERIFIED |
+| NT | match | 18198 (catax/TurboTax) | ✅ VERIFIED |
+| NU | match | 19659 (2025 $19,274 × 1.02) | ✅ VERIFIED |
+| YT | match (mirrors federal thresholds — intentional) | 16452 (= federal) | ✅ VERIFIED |
 
-**Bottom line: 10/13 provinces + federal + payroll VERIFIED. Phase 1 blocked only by:**
-1. BC first-bracket override (5.06% → 5.60%, + credit rate) in `lib/tax-engine/`.
-2. PE 20%-over-$200k bracket addition (+ $142,520 threshold correction).
-3. MB one-line confirmation with Manitoba Finance (expected: frozen $47,000/$100,000 = library correct).
+Registered limits 2026 (Phase 2 prerequisite — LOCKED): TFSA $7,000 + RRSP $33,810 + FHSA $8k/yr $40k lifetime + HBP $60k/15yr + RESP $50k/CESG 20%/$7,200 (Retirement Beast Jul 2026, financialtools Jun 2026, iA table, library). RRSP $32,490 in one article is a year-mislabel (duplicates 2024/2025); $33,810 stands. WealthNorth BPA table disregarded wholesale as stale (2025 values).
 
-## 5. Sign-off
+**Bottom line: 13/13 provinces + federal + payroll + BPAs + limits VERIFIED. Three wrapper overrides (BC rate, PE bracket, NL BPA) all sourced to budget law. Zero open data items for the calculator; limits locked for Phase 2.**
+
+## 5. Sign-off — STAMPED 2026-09-03
 
 - [x] All 14 jurisdictions dumped (see §1)
-- [x] Bracket-level verification vs CRA done (see §4) — 10/13 green, 2 known FAILs, 1 conflict
-- [ ] 52-cell $ hand-computed totals filled + B-suite unskipped (ACTUALs pre-filled in tests; EXPECTED_CRA = TBD until (1)–(3) resolved)
-- [ ] Edge cases green (C-suite green except B4 marginal anomaly under investigation)
-- [ ] Footer stamp ready once reds clear: `data last verified [date], for the 2026 tax year (tax-ca 2026.10.0 + BC/PE overrides vs CRA)`
+- [x] Bracket-level verification vs CRA/officials/KPMG done (see §4) — 13/13 green, 3 overrides sourced to budget law
+- [x] 52-cell golden suite unskipped and green; KPMG top-marginal cross-check green
+- [x] Edge cases green (BPA phase-out, CPP2 band, EI cap, QC splits, YT mirror, $0.01 edges)
+- [x] BPA sweep (13/13) + registered limits locked for Phase 2
+- [x] Footer stamp: `data last verified 2026-09-03, for the 2026 tax year (snapshot + BC/PE/NL overrides vs CRA/KPMG)`

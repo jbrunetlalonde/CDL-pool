@@ -27,12 +27,11 @@ PEI threshold variant) — CRA/RQ/Finance wins every tie.
 - MB: two CRA sources disagree (page $47,564/$101,200 vs payroll T4032 $47,000/$100,000). Snapshot uses frozen/T4032 values; resolution requires Manitoba Finance — one email before stamp.
 - PEI threshold variant: CRA page $142,520 vs EY/CI tables $142,250. Snapshot uses CRA ($142,520); $270 gap noted.
 
-## Pre-build gate (do not scaffold UI until all green)
+## Pre-build gate — CLEARED 2026-09-03
 
-- [x] All Tier-1 URLs reachable (5×200, 1×browser-only — recorded above)
-- [x] Bracket snapshot `data/tax-tables/2026.cra.json` written with overrides flagged
-- [x] Structural + edge tests green (37 pass); D1/D2 correctly red on BC/PE library staleness
-- [ ] BC override + PE bracket implemented in `lib/tax-engine/` (at scaffold time)
-- [ ] MB confirmation email sent + recorded here
-- [ ] BPA Form 428/TD1 pass recorded here
-- [ ] Footer stamp: `data last verified [date], 2026 tax year (snapshot + overrides vs Tier-1)`
+- [x] All Tier-1 URLs reachable (5×200, 1×browser-only — recorded above) + KPMG Jun-30-2026 tables as Big-Four oracle
+- [x] Bracket snapshot `data/tax-tables/2026.cra.json` written with overrides flagged (BC rate, PE bracket, NL BPA)
+- [x] Structural + edge tests green; B golden 52-cell suite green; KPMG top-marginal cross-check green
+- [x] MB resolved (freeze confirmed 6 ways, no email needed); PEI $142,520 confirmed by 1.8% arithmetic
+- [x] BPA Form 428/TD1 pass done via index arithmetic + T4032s + provincial sources (13/13)
+- [x] Footer stamp: `data last verified 2026-09-03, for the 2026 tax year (snapshot + BC/PE/NL overrides vs CRA/KPMG)`

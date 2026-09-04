@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CDL-pool POC — 2026 Canada Tax Playground (informational only)</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+  label { display: block; margin: 1rem 0 0.25rem; font-weight: 600; }
+  input[type=range] { width: 100%; }
+  select, input[type=number] { font-size: 1rem; padding: 0.4rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; margin-top: 1rem; }
+  .grid div { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 0.25rem 0; }
+  .bar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-top: 1rem; }
+  .bar span { display: block; height: 100%; }
+  .legend { font-size: 0.85rem; color: #555; margin-top: 0.4rem; }
+  footer { margin-top: 2rem; font-size: 0.8rem; color: #777; }
+</style>
+</head>
+<body>
+<h1>2026 Canada Tax Playground (POC)</h1>
+<p>Thin UI over <code>lib/tax-engine</code>. Numbers are estimates.</p>
+
+<label for="income">Employment income: <output id="incomeOut">$85,000</output></label>
+<input id="income" type="range" min="0" max="300000" step="1000" value="85000">
+<input id="incomeNum" type="number" min="0" max="1000000" step="1000" value="85000" aria-label="Exact income">
+
+<label for="province">Province / territory</label>
+<select id="province"></select>
+
+<div class="bar" aria-hidden="true"><span id="segProv"></span><span id="segFed"></span><span id="segNet"></span></div>
+<div class="legend"><span id="legProv"></span> provincial &nbsp; <span id="legFed"></span> federal &nbsp; <span id="legNet"></span> take-home</div>
+
+<div class="grid">
+  <div><span>Federal tax</span><strong id="fed"></strong></div>
+  <div><span>Provincial tax</span><strong id="prov"></strong></div>
+  <div><span>Income tax total</span><strong id="total"></strong></div>
+  <div><span>CPP / QPP</span><strong id="cpp"></strong></div>
+  <div><span>EI</span><strong id="ei"></strong></div>
+  <div><span>QPIP (QC)</span><strong id="qpip"></strong></div>
+  <div><span>Take-home (annual)</span><strong id="net"></strong></div>
+  <div><span>Take-home (monthly)</span><strong id="monthly"></strong></div>
+  <div><span>Marginal rate</span><strong id="marg"></strong></div>
+  <div><span>Average rate</span><strong id="avg"></strong></div>
+</div>
+
+<footer>For informational purposes only. Numbers are estimates and may not reflect actual tax liabilities. Data: snapshot 2026-09-03 vs CRA.</footer>
+
+<script type="module">
+import { getFederalTax, getProvincialTax, getMarginalRate, PROVINCE_CODES } from '../lib/tax-engine/calculate.mjs';
+import { payroll } from '../lib/tax-engine/payroll.mjs';
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 2 });
+
+for (const c of PROVINCE_CODES) {
+  const o = document.createElement('option');
+  o.value = c; o.textContent = c;
+  if (c === 'ON') o.selected = true;
+  $('province').appendChild(o);
+}
+
+function render() {
+  const income = Math.max(0, Number($('incomeNum').value || 0));
+  $('income').value = Math.min(income, 300000);
+  $('incomeOut').textContent = fmt(income);
+  const p = $('province').value;
+  const fed = getFederalTax(p, income), prv = getProvincialTax(p, income);
+  const pay = payroll(income, p);
+  const total = fed + prv, net = income - total - pay.total;
+  $('fed').textContent = fmt(fed);
+  $('prov').textContent = fmt(prv);
+  $('total').textContent = fmt(total);
+  $('cpp').textContent = fmt(pay.pension.total);
+  $('ei').textContent = fmt(pay.ei);
+  $('qpip').textContent = fmt(pay.qpip);
+  $('net').textContent = fmt(net);
+  $('monthly').textContent = fmt(net / 12);
+  $('marg').textContent = (getMarginalRate(p, income) * 100).toFixed(2) + '%';
+  $('avg').textContent = (income ? (total / income) * 100 : 0).toFixed(2) + '%';
+  const t = Math.max(income, 1);
+  $('segProv').style.width = (prv / t * 100) + '%'; $('segProv').style.background = '#e15728';
+  $('segFed').style.width = (fed / t * 100) + '%'; $('segFed').style.background = '#1f6feb';
+  $('segNet').style.width = (Math.max(net, 0) / t * 100) + '%'; $('segNet').style.background = '#2da44e';
+  $('legProv').textContent = `Provincial ${fmt(prv)}`;
+  $('legFed').textContent = `Federal ${fmt(fed)}`;
+  $('legNet').textContent = `Take-home ${fmt(net)}`;
+}
+
+$('income').addEventListener('input', (e) => { $('incomeNum').value = e.target.value; render(); });
+$('incomeNum').addEventListener('input', render);
+$('province').addEventListener('change', render);
+render();
+</script>
+</body>
+</html>
